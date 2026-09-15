@@ -1,0 +1,34 @@
+# Python 缓存和构建产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# 虚拟环境
+.venv/
+venv/
+
+# 本地配置与密钥
+.env
+.env.*
+!.env.example
+
+# 运行数据与 Agent 工作文件
+data/
+workspace/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# 开发工具缓存
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
