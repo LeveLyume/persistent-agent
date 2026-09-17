@@ -164,17 +164,17 @@
 
 **实际变更与决策：**
 
-- 新增 `docs/project-flow-v0.0.5.mmd`，按源码绘制 CLI 输入、配置、Runtime、会话历史、上下文、模型调用、成功保存及失败处理；单独标明未接入运行流程的占位模块。
+- 新增 `docs/diagrams/project-flow-v0.0.5.mmd`，按源码绘制 CLI 输入、配置、Runtime、会话历史、上下文、模型调用、成功保存及失败处理；单独标明未接入运行流程的占位模块。依 Owner 后续要求，将 Mermaid 文件归入独立的 `docs/diagrams/` 目录。
 - README 增加流程图入口；工作日志将 v0.0.4 的旧待推送状态更正为已提交和推送，并记录证据边界。
 - 保留 `pyproject.toml` 的包版本 `0.1.0`。它是安装包元数据，不等同于开发管理版本；本次没有修改运行代码、依赖或发布内容。
 - Owner 补充要求工作日志直接写明文档更新完成，再申请 push；AGENTS.md 第 6 节已据此澄清文档更新与任务完成的区别，并规定工作日志最后编辑、之后只做必要的检查与提交推送流程。
-- 因流程规范调整发生在本任务首次本地提交之后，追加一项提交记录本次调整；不改写已有提交。两项提交同属 v0.0.5，拟在同一次批准后推送。
+- 因流程规范和图文件目录调整发生在本任务首次本地提交之后，分别追加提交记录调整；不改写已有提交。三项提交同属 v0.0.5，拟在同一次批准后推送。
 
 **验证与限制：** 已核对 CLI、Runtime、Session、ContextBuilder、Model 及空白占位模块源码；流程图对应当前代码路径；README 链接指向现有 `.mmd` 文件；`git diff --check` 通过。Mermaid CLI 未安装，未做渲染检查；未运行真实模型 API，因本任务不修改运行代码。
 
 **文档：** README 与工作日志已同步；空白的架构设计、记忆设计及 Roadmap 未受影响，无需更新。
 
-**Commit messages：** `docs(project): record current flow and progress [v0.0.5]`；`docs(process): clarify work-log completion wording [v0.0.5]`。
+**Commit messages：** `docs(project): record current flow and progress [v0.0.5]`；`docs(process): clarify work-log completion wording [v0.0.5]`；`docs(project): group Mermaid diagram in diagrams directory [v0.0.5]`。
 
 **下一步：** 按规范汇报提交范围、SHA 和目标分支，申请推送批准；推送核验后再报告任务完成。随后等待 Owner 定义下一 Development Version。
 
