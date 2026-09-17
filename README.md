@@ -6,11 +6,13 @@
 
 ## 当前状态
 
-项目目前处于早期开发阶段，已经实现：
+**当前开发基线：v0.0 — Initial Working Baseline（已完成，历史回溯）。** 下一 Development Version 尚待 Owner 定义。`pyproject.toml` 中的包版本 `0.1.0` 不等同于开发版本，也不表示后续功能已完成。
+
+已经实现：
 
 - 基于 CLI（命令行界面）的连续对话
 - 通过 OpenAI 兼容接口调用 DeepSeek
-- 当前会话历史记录
+- 当前会话历史记录（默认最多保留最近 20 个完整问答轮次）
 - 上下文构建
 - `/reset` 清空当前会话
 - `/exit` 正常退出
@@ -24,26 +26,22 @@
 - 自动记忆提取
 - 工具调用循环
 - 本地工作区访问控制
+- Identity、Relationship、State 系统
 - Web 或桌面界面
+- 自动化测试套件
 
 > 当前的 Working Memory 只存在于程序内存中。关闭程序或执行 `/reset` 后，会话历史会丢失。
 
 ## 架构概览
 
-当前已经跑通的调用链路：
+当前运行流程：
 
 ```text
-CLI
- ↓
-Agent Runtime
- ↓
-Context Builder
- ↓
-Working Memory
- ↓
-Model Provider
- ↓
-DeepSeek API
+CLI → AgentRuntime
+        ├─ 读取 WorkingMemory 的历史副本
+        ├─ ContextBuilder：系统提示 + 历史 + 当前输入
+        ├─ ModelProvider → OpenAICompatibleModel → DeepSeek API
+        └─ 成功后保存本轮问答到 WorkingMemory → 返回回复
 ```
 
 项目长期规划中的核心组成包括：
@@ -68,7 +66,7 @@ DeepSeek API
 - DeepSeek API Key
 - Windows PowerShell（以下命令以 Windows 为例）
 
-当前开发环境使用 Python 3.13.7。
+已核验的开发环境为 Windows / PowerShell / Python 3.13.7；其他平台尚未验证。运行依赖由 `pyproject.toml` 声明：`openai`、`python-dotenv`，目前未锁定版本。
 
 ## 安装
 
@@ -95,7 +93,7 @@ py -m venv .venv
 
 ## 配置
 
-复制配置模板：
+首次配置时复制模板；已有 `.env` 时直接编辑原文件：
 
 ```powershell
 Copy-Item .env.example .env
@@ -106,10 +104,12 @@ Copy-Item .env.example .env
 ```dotenv
 LLM_API_KEY=你的DeepSeek_API_Key
 LLM_BASE_URL=https://api.deepseek.com
-LLM_MODEL=deepseek-flash
+LLM_MODEL=填写账户可用的聊天模型名称
 ```
 
-真实 API Key 只能保存在本地 `.env` 中。
+模板当前包含历史模型示例；请填写实际可用的模型名称，不将模板视为服务商当前模型目录。程序从当前工作目录读取 `.env`，已有进程环境变量优先，三个配置项均不能为空。
+
+真实 API Key 可通过本地 `.env` 或进程环境变量提供。
 
 不要将 API Key 写进：
 
@@ -149,7 +149,9 @@ Agent：……
 | `/reset` | 清空当前会话历史 |
 | `/exit`  | 退出程序         |
 
-`/reset` 当前只清空内存中的会话记录。长期记忆系统完成后，它仍不会删除长期记忆。
+`/reset` 清空当前内存会话；目前没有长期记忆可供保留或删除。
+
+当前采用同步文本回复，没有流式输出。请求失败的轮次不会写入历史；模型客户端配置 60 秒超时并关闭自动重试。20 轮限制不是 Token 预算，过长输入仍可能超过模型上下文限制。
 
 ## 项目结构
 
@@ -164,14 +166,14 @@ persistent-agent/
 │       ├── session/            # 当前会话与 Working Memory
 │       ├── cognition/          # 上下文构建
 │       ├── model/              # 模型接口与适配器
-│       ├── memory/             # 长期记忆系统
-│       ├── capabilities/       # 工具与其他能力
-│       ├── environment/        # 执行环境
-│       ├── identity/           # Agent 身份
-│       ├── relationship/       # 用户关系状态
-│       ├── state/              # Agent 当前状态
+│       ├── memory/             # 长期记忆（未实现）
+│       ├── capabilities/       # 工具与其他能力（未实现）
+│       ├── environment/        # 执行环境（未实现）
+│       ├── identity/           # Agent 身份（未实现）
+│       ├── relationship/       # 用户关系状态（未实现）
+│       ├── state/              # Agent 当前状态（未实现）
 │       └── interfaces/         # CLI 等交互入口
-├── tests/                      # 单元测试与集成测试
+├── tests/                      # 测试预留目录，尚无测试套件
 ├── data/                       # 本地运行数据，不提交 Git
 ├── workspace/                  # Agent 工作目录，不提交 Git
 ├── .env.example                # 配置模板
@@ -181,31 +183,19 @@ persistent-agent/
 
 部分目录仍处于接口预留或尚未实现状态。目录存在不代表对应功能已经完成。
 
-## V0.1 路线
+## 后续方向与开发记录
 
-- [x] 创建项目结构
-- [x] 建立 Python 虚拟环境
-- [x] 接通 DeepSeek API
-- [x] 实现 CLI 连续对话
-- [x] 实现 Working Memory
-- [x] 实现基础 Context Builder
-- [ ] 定义长期记忆数据结构
-- [ ] 使用 SQLite 持久化记忆
-- [ ] 实现记忆保存、读取与删除
-- [ ] 实现记忆检索与上下文注入
-- [ ] 接入 Embedding 语义检索
-- [ ] 实现基础工具注册与调用循环
-- [ ] 限制工具只能访问指定工作区
-- [ ] 完成 V0.1 集成验证
+长期方向包括独立的持久化记忆、SQLite 存储、记忆提取与检索、上下文注入、Embedding（文本向量化）检索、工具调用循环和受控工作区。Embedding Provider 尚未确定，聊天接口接通不代表向量化接口可用。
 
-## 设计文档
+这些是候选方向，不是已批准的下一版本计划。原 README 的“V0.1 路线”已归入历史规划，下一版本由 Owner 定义目标和范围。
 
-| 文档                           | 内容                         |
-| ------------------------------ | ---------------------------- |
-| `docs/architecture.md`         | 整体架构和模块边界           |
-| `docs/memory-system-design.md` | 长期记忆系统设计             |
-| `docs/roadmap.md`              | 项目演进路线                 |
-| `docs/work-log.md`             | 实际开发过程、问题和交接记录 |
+| 文档 | 用途与当前状态 |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | 项目开发协作规范 |
+| [工作日志](docs/work-log.md) | 开发版本、任务记录、历史提交及验证证据 |
+| [整体架构](docs/architecture.md) | 空白占位，尚未写入设计 |
+| [记忆系统设计](docs/memory-system-design.md) | 空白占位，尚未写入设计 |
+| [Roadmap](docs/roadmap.md) | 空白占位，尚未写入版本规划 |
 
 ## 开发原则
 
