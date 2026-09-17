@@ -9,7 +9,9 @@
 - 已实现 CLI 连续对话、模型适配、Runtime、上下文构建、进程内 Working Memory、清空与退出、基础错误处理。
 - 长期记忆、SQLite、记忆提取与检索、Embedding、工具调用、环境访问控制及 Identity / Relationship / State 尚未实现；对应源码为空白占位。
 - **v0.0.4 — 基线文档整理与推送审批规范：已 commit 并 push，任务完成。**
-- **v0.0.5 — 当前项目流程图与进度记录：文档更新完成。**
+- **v0.0.5 — 当前项目流程图与进度记录：已 commit 并 push。**
+- **v0.0.6 — 协作规范维护：已 commit 并 push，任务完成。**
+- **v0.0.7 — 设计文档与项目一致性规则：文档更新完成；尚须按提交推送流程核验。**
 - 下一 Development Version 尚未由 Owner 定义。旧文档的“V0.1”属于历史路线，不作为当前授权计划。
 - 本次整理开始时，分支为 `main`，HEAD 为 `6efb2db`；工作区已有 Owner 对 `AGENTS.md` 的未提交修改，随后 Owner 授权调整推送审批规则，本次将规范与两份文档共同纳入 v0.0.4。
 
@@ -193,6 +195,24 @@
 **Commit message：** `docs(process): clarify review and maintenance workflow [v0.0.6]`
 
 **下一步：** 核对本任务的独立提交范围，推送前汇报并等待 Owner 明确批准；三份设计文档仍处待审阅状态。
+
+**后续核验：** Owner 已批准推送 `d5ae5a009ae66d4f15df7c08f7f1f9bcdb0b1789`；`git push origin main` 成功，随后 `git ls-remote origin refs/heads/main` 与本地 HEAD 均指向该提交。此项记录在后续文档维护时补充，不改写原任务的提交。
+
+## v0.0.7 — 设计文档与项目一致性规则
+
+**授权与目标：** Owner 指出三份设计文档仍未提交，并要求修改 `AGENTS.md`，使每次开发形成完整 Git 循环、每次提交保持项目资料同步。本次将待审阅设计文档与其必要的 README、流程规范、工作日志同步纳入同一文档维护任务；不启动下一 Development Version。
+
+**日期 / 文档状态：** 2026-09-17；文档更新与提交前核对完成。本段不表示 commit 或 push 已发生。
+
+**实际变更与决策：** 完成 `architecture.md`、`memory-system-design.md` 和 `roadmap.md`，分别描述当前/目标架构、长期记忆设计与候选开发顺序；根据源码将占位模块标为未实现。README 不再称三份文件为空白。Roadmap 不固定易过时的 HEAD。`AGENTS.md` 增加提交前项目一致性检查、受影响文档同步、按路径暂存与完整暂存快照复查，以及推送后远端和工作区核验；限定文件范围与必要同步冲突时先解决，不提交已知不一致状态。
+
+**验证与限制：** 对照 README、工作日志、`pyproject.toml`、相关源码、Git 历史与当前工作区核对已实现和规划状态；`git diff --check` 通过；五份变更文档的代码围栏配对、本地链接、敏感配置与旧占位描述已检查。Mermaid CLI 未安装，图未做渲染验证；未改运行代码，未重测真实模型 API。
+
+**文档：** 三份设计文档、README、AGENTS.md 与本日志同步；既有流程图反映当前代码，无需更新。历史日志中“当时为空白”的表述保留为历史事实。
+
+**Commit message：** `docs(project): synchronize design docs and commit workflow [v0.0.7]`
+
+**下一步：** 检查最终暂存快照并提交；推送前向 Owner 报告提交 SHA、文件范围、验证限制与目标分支，等待批准。长期记忆等功能仍未实现，下一 Development Version 仍由 Owner 定义。
 
 ## 历史候选方向（未批准为当前版本）
 

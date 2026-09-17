@@ -194,9 +194,9 @@ persistent-agent/
 | [AGENTS.md](AGENTS.md) | 项目开发协作规范 |
 | [工作日志](docs/work-log.md) | 开发版本、任务记录、历史提交及验证证据 |
 | [项目流程图 v0.0.5](docs/diagrams/project-flow-v0.0.5.mmd) | 当前实际运行链路与预留模块 |
-| [整体架构](docs/architecture.md) | 空白占位，尚未写入设计 |
-| [记忆系统设计](docs/memory-system-design.md) | 空白占位，尚未写入设计 |
-| [Roadmap](docs/roadmap.md) | 空白占位，尚未写入版本规划 |
+| [整体架构](docs/architecture.md) | 当前 CLI 架构、目标架构与模块边界（设计草案） |
+| [记忆系统设计](docs/memory-system-design.md) | 长期记忆目标与首阶段候选方案（尚未实现） |
+| [Roadmap](docs/roadmap.md) | 已完成基线与后续候选任务；下一 Development Version 尚待 Owner 定义 |
 
 ## 开发原则
 
