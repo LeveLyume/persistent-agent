@@ -9,7 +9,7 @@
 - 已实现 CLI 连续对话、模型适配、Runtime、上下文构建、进程内 Working Memory、清空与退出、基础错误处理。
 - 长期记忆、SQLite、记忆提取与检索、Embedding、工具调用、环境访问控制及 Identity / Relationship / State 尚未实现；对应源码为空白占位。
 - **v0.0.4 — 基线文档整理与推送审批规范：已 commit 并 push，任务完成。**
-- **v0.0.5 — 当前项目流程图与进度记录：文档已更新并核对，待本任务 commit / push，尚未完成。**
+- **v0.0.5 — 当前项目流程图与进度记录：文档更新完成。**
 - 下一 Development Version 尚未由 Owner 定义。旧文档的“V0.1”属于历史路线，不作为当前授权计划。
 - 本次整理开始时，分支为 `main`，HEAD 为 `6efb2db`；工作区已有 Owner 对 `AGENTS.md` 的未提交修改，随后 Owner 授权调整推送审批规则，本次将规范与两份文档共同纳入 v0.0.4。
 
@@ -160,22 +160,23 @@
 
 **授权与目标：** Owner 要求更新工作日志进度、更新版本号，并生成文件名带版本号的 Mermaid 图。本任务沿用已完成的 v0.0 基线，分配文档维护小版本 v0.0.5；不改变功能范围或开启下一 Development Version。
 
-**日期 / 状态：** 2026-09-17；文档修改及核对完成，待 commit、推送审批和 push，任务尚未完成。
+**日期 / 文档状态：** 2026-09-17；文档更新完成。
 
 **实际变更与决策：**
 
 - 新增 `docs/project-flow-v0.0.5.mmd`，按源码绘制 CLI 输入、配置、Runtime、会话历史、上下文、模型调用、成功保存及失败处理；单独标明未接入运行流程的占位模块。
 - README 增加流程图入口；工作日志将 v0.0.4 的旧待推送状态更正为已提交和推送，并记录证据边界。
 - 保留 `pyproject.toml` 的包版本 `0.1.0`。它是安装包元数据，不等同于开发管理版本；本次没有修改运行代码、依赖或发布内容。
-- 按 Owner 的编辑顺序偏好，在流程图和 README 核对后最后编辑工作日志。尚未发生的本次 commit / push 不提前记为完成；按 AGENTS.md 第 6 节在提交中记录当时真实状态，推送结果在后续任务的日志更新时同步。
+- Owner 补充要求工作日志直接写明文档更新完成，再申请 push；AGENTS.md 第 6 节已据此澄清文档更新与任务完成的区别，并规定工作日志最后编辑、之后只做必要的检查与提交推送流程。
+- 因流程规范调整发生在本任务首次本地提交之后，追加一项提交记录本次调整；不改写已有提交。两项提交同属 v0.0.5，拟在同一次批准后推送。
 
 **验证与限制：** 已核对 CLI、Runtime、Session、ContextBuilder、Model 及空白占位模块源码；流程图对应当前代码路径；README 链接指向现有 `.mmd` 文件；`git diff --check` 通过。Mermaid CLI 未安装，未做渲染检查；未运行真实模型 API，因本任务不修改运行代码。
 
 **文档：** README 与工作日志已同步；空白的架构设计、记忆设计及 Roadmap 未受影响，无需更新。
 
-**Commit message：** `docs(project): record current flow and progress [v0.0.5]`。
+**Commit messages：** `docs(project): record current flow and progress [v0.0.5]`；`docs(process): clarify work-log completion wording [v0.0.5]`。
 
-**下一步：** 完成本地提交，按规范汇报提交 SHA、文件范围和目标分支，等待 Owner 明确批准后推送并核验。随后等待 Owner 定义下一 Development Version。
+**下一步：** 按规范汇报提交范围、SHA 和目标分支，申请推送批准；推送核验后再报告任务完成。随后等待 Owner 定义下一 Development Version。
 
 ## 历史候选方向（未批准为当前版本）
 
