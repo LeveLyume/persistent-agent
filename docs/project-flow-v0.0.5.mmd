@@ -1,0 +1,31 @@
+flowchart TD
+    start([启动 CLI]) --> settings["读取并验证配置<br/>interfaces/cli.py + config/settings.py"]
+    settings -->|缺少配置| startup_error([显示启动失败并结束])
+    settings -->|配置有效| assemble["组装 Runtime、WorkingMemory、ContextBuilder、模型适配器<br/>interfaces/cli.py"]
+    assemble --> input{"用户输入"}
+    input -->|空输入| input
+    input -->|/reset| reset["清空当前会话<br/>runtime/agent_runtime.py + session/working_memory.py"] --> input
+    input -->|/exit、Ctrl+C、EOF| close([关闭模型客户端并退出])
+    input -->|普通消息| runtime["处理本轮消息<br/>runtime/agent_runtime.py"]
+    runtime --> snapshot["读取历史副本<br/>session/working_memory.py"]
+    snapshot --> context["系统提示 + 历史 + 当前输入<br/>cognition/context_builder.py"]
+    context --> provider["ModelProvider.generate 接口<br/>model/base.py"]
+    provider --> adapter["OpenAI 兼容适配器<br/>model/openai_compatible.py"]
+    adapter --> api["配置的模型 API"]
+    api -->|有效文字回复| save["保存本轮问答；最多保留最近 20 轮<br/>session/working_memory.py"]
+    save --> reply["显示回复<br/>interfaces/cli.py"] --> input
+    api -->|请求失败或回复无效| error["抛出 ModelError；本轮不保存<br/>model/openai_compatible.py"]
+    error --> show_error["显示错误<br/>interfaces/cli.py"] --> input
+
+    message["共用消息结构：Message<br/>core/types.py"] -.-> context
+    message -.-> snapshot
+
+    subgraph reserved["预留模块：当前没有进入运行流程"]
+        memory["长期记忆 / SQLite / 检索 / 提取<br/>memory/"]
+        tools["工具注册与调用<br/>capabilities/"]
+        environment["工作区访问控制<br/>environment/"]
+        identity["身份、关系与内部状态<br/>identity/ + relationship/ + state/"]
+    end
+
+    classDef reserved fill:#f5f5f5,stroke:#999,color:#555,stroke-dasharray:5 5;
+    class memory,tools,environment,identity reserved;
