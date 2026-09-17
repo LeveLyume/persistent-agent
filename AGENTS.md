@@ -85,10 +85,10 @@ Owner 要求先查看 diff 时，可在自审后停于“待审阅”：先汇�
 
 提交格式：
 
-`<type>(<scope>): <description> [v0.X.Y]`
+`<type>(<scope>): <中文描述> [v0.X.Y]`
 
 type 使用 `feat`、`fix`、`refactor`、`test`、`docs` 或 `chore`。
-描述应说明实际变化，避免 `update`、`changes` 等模糊信息。
+描述使用中文说明实际变化，避免“更新”“调整”等模糊表述。
 
 提交前检查 `git status`、`git diff` 和 `git diff --cached`；按路径暂存并复查暂存文件清单及完整 diff，不使用 `git add .` 代替范围判断。
 推送前核对目标提交、目标分支和工作区状态，确保仅推送已汇报的提交范围；推送后核验远端分支指向目标提交，并列出仍未提交的工作区修改。
