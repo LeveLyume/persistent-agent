@@ -2,7 +2,7 @@
 
 ## 1. 文档状态与目标
 
-**Draft，2026-09-17。** 这是目标设计，不是功能说明。当前只有 `session/working_memory.py` 的进程内会话历史；`memory/` 下的文件均为空白占位，尚无持久化 Memory。最近的候选最小阶段是 SQLite 支撑的手动记忆闭环；下一 Development Version 的范围仍由 Owner 确定。长期目标是 Persistent Character Memory。**LLM 不等于 Memory；Memory 必须独立于模型存在。**
+**Draft，2026-09-18。** 这是目标设计，不是功能说明。当前只有 `session/working_memory.py` 的进程内会话历史；`memory/` 下的文件均为空白占位，尚无持久化 Memory。Owner 已确定 v0.1 先进行本地对话模型试运行；SQLite 支撑的手动记忆闭环保留为后续候选，正式版本范围另行确定。长期目标是 Persistent Character Memory。**LLM 不等于 Memory；Memory 必须独立于模型存在。**
 
 ## 2. 目标
 

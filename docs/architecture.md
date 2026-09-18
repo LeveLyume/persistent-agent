@@ -2,7 +2,7 @@
 
 ## 1. 文档状态
 
-**状态：** Draft；**更新：** 2026-09-17；**项目阶段：** v0.0 CLI 基线已完成，下一 Development Version 尚未由 Owner 定义。本文同时描述当前架构（Current）、目标架构（Target）与远期方向（Future）；实际行为以代码和可重复验证结果为准。
+**状态：** Draft；**更新：** 2026-09-18；**项目阶段：** v0.1 本地对话模型试运行进行中，v0.1.1 已接入并完成本机验证，提交推送状态见工作日志与 Git。本文同时描述当前架构（Current）、目标架构（Target）与远期方向（Future）；实际行为以代码和可重复验证结果为准。
 
 ## 2. 项目目标
 
@@ -23,6 +23,8 @@
 
 `interfaces/cli.py` 从当前工作目录加载 `.env`，创建模型适配器、Working Memory、Context Builder 和 Runtime。`AgentRuntime.handle_message` 读取历史副本、构建消息、同步调用模型，成功后才保存本轮问答。`/reset` 清空会话，`/exit` 退出并关闭模型客户端。
 
+本地入口 `scripts/local_model.py chat` 只为 CLI 子进程覆盖三个模型配置项，调用同一接口链路。`serve` 运行独立的便携 llama.cpp 服务，监听本机地址、启用本地密钥，推理程序和权重位于忽略的 `data/local-model/`。部署属于启动工具，不创建新的 Runtime 或 ModelProvider；同协议服务通过配置切换。详见[本地模型说明](./local-model.md)。
+
 ```mermaid
 flowchart TD
   CLI["CLI 输入与命令"] --> RT["AgentRuntime"]
@@ -33,7 +35,7 @@ flowchart TD
   CB --> RT
   RT --> MP["ModelProvider 协议"]
   MP --> OA["OpenAICompatibleModel"]
-  OA --> API["配置的 DeepSeek API"]
+  OA --> API["配置的 DeepSeek 或本地 llama.cpp API"]
   API --> OA --> RT
   RT -- "成功后保存问答" --> WM
   RT --> CLI
@@ -135,7 +137,7 @@ adapters → 外部 SDK 与具体持久化产品
 
 | 新能力 | 接入位置 |
 | --- | --- |
-| 更换模型 | 新 Model Provider |
+| 更换模型 | 同协议服务复用现有适配器与配置；不同协议才新增 Model Provider |
 | 长期记忆 | Memory Service |
 | 新工具 / MCP | Capability、Tool Registry |
 | Docker 或远程机器 | Environment 实现 |
@@ -147,7 +149,7 @@ adapters → 外部 SDK 与具体持久化产品
 
 ## 13. 当前限制
 
-只有 CLI 与同步非流式文本；会话仅在进程内，最多 20 轮但没有 Token 预算；没有长期记忆、工具循环、环境访问边界。Identity、Relationship、State 仍是空文件。仓库没有自动化测试套件；已有离线模拟核验记录见工作日志，真实 API 异常路径覆盖不足。配置依赖启动时的当前工作目录。
+只有 CLI 与同步非流式文本；会话仅在进程内，最多 20 轮但没有 Token 预算；本地服务设置 4096 Token 上下文，超长请求明确报错。没有长期记忆、工具循环、环境访问边界。Identity、Relationship、State 仍是空文件。已有本地部署和失败路径自动化测试及本机真实模型验证，供应商完整异常路径仍未覆盖。原 CLI 配置依赖启动时的当前工作目录，本地脚本固定以项目根目录启动 CLI。
 
 ## 14. 架构决策记录
 
@@ -155,6 +157,7 @@ adapters → 外部 SDK 与具体持久化产品
 | --- | --- | --- | --- |
 | 使用 `src/` 布局 | 区分包代码与仓库内容 | 统一包路径 | 已采用 |
 | Provider/Adapter 隔离模型 | 降低供应商耦合 | Runtime 依赖内部协议 | 基础实现 |
+| 便携 llama.cpp 复用兼容适配器 | 本地试运行及可回退 | 独立目录与子进程配置，原 .env 保留 | v0.1.1 已实现并实测 |
 | Working Memory 与长期 Memory 分离 | 生命周期不同 | 未来需独立 Memory Service | 前者已实现，后者规划 |
 | Runtime 只负责编排 | 保持模块边界 | 不直接接 SQL 或具体 Tool | 当前遵循，目标约束 |
 | 首版 CLI 与同步调用 | 建立可运行基线 | 暂无流式与多界面 | 已采用 |

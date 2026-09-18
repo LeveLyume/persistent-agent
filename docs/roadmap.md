@@ -1,6 +1,6 @@
 # Persistent Agent Roadmap
 
-> 更新：2026-09-17。本文区分已验证基线与候选开发方向；下一 Development Version 尚未由 Owner 定义。开发管理编号遵循 [AGENTS.md](../AGENTS.md)：Development Version 为 `v0.X`，Task Version 为 `v0.X.Y`。它们不自动等于 `pyproject.toml` 包版本、Git Tag 或正式发布。
+> 更新：2026-09-18。本文区分已验证基线、已批准的 v0.1 本地对话模型试运行与后续候选方向。开发管理编号遵循 [AGENTS.md](../AGENTS.md)：Development Version 为 `v0.X`，Task Version 为 `v0.X.Y`。它们不自动等于 `pyproject.toml` 包版本、Git Tag 或正式发布。
 
 ## 1. 项目愿景
 
@@ -10,7 +10,9 @@
 
 **已完成的 v0.0 基线：** 仓库骨架与 Git 历史、Python 项目配置、CLI 入口、OpenAI 兼容模型适配器、基础 Runtime、Context Builder、进程内 Working Memory、连续对话、`/reset`、`/exit`。工作日志记录本地 Python 虚拟环境与真实 DeepSeek 回复的历史用户反馈；当前代码按配置调用该接口。
 
-**待核验或证据有限：** 分支、最近提交和远端同步状态随每次提交变化，须以当次 Git 检查为准，不在 Roadmap 固定 HEAD。README 与工作日志已入库；远端状态需在推送后实时核验。具体已安装依赖版本只有工作日志中的历史本地快照，`pyproject.toml` 未锁定版本。工作日志记录离线模拟路径通过，但异常路径未专项覆盖；仓库当前没有自动化测试套件。真实 API 成功是历史反馈，本次文档编辑未重测。
+**本轮已实现并验证：** Qwen3-0.6B Q8 便携部署，通过现有兼容适配器接入 CLI；本机 GPU、连续对话、reset、停服错误、超长输入和访问密钥已验证，新增 5 项自动化测试。任务完成仍以批准后的提交推送为准。
+
+**待核验或证据有限：** 分支、最近提交和远端同步状态以当次 Git 检查为准。`pyproject.toml` 未锁定 Python 依赖；本地部署则固定推理程序、模型修订与校验值。DeepSeek 真实 API 沿用历史反馈，本轮未调用；本机短对话测试不等于长时间稳定性或模型质量评估。
 
 **尚未实现：** 长期记忆、SQLite Memory Store、Embedding、自动提取、工具调用循环、Environment 路径约束、Identity / Relationship / State 的实际行为、Web / Desktop / Voice / Avatar。
 
@@ -28,22 +30,33 @@ User Input → CLI → AgentRuntime → ContextBuilder
 
 历史用户反馈覆盖 CLI 正常流程，离线模拟补验覆盖历史裁剪、失败不写入、reset 等；详见 [work-log.md](./work-log.md)。限制是只有同步文本 CLI、会话随进程消失、20 轮不是 Token 预算、无长期 Memory 或工具能力。
 
-## 4. 下一候选方向：Persistent Memory Foundation
+## 4. 已批准的 v0.1：本地对话模型试运行
 
-**状态：规划候选，未获 Owner 定义为 `v0.1`。** 长期 Memory 是近期优先方向，但正式目标、范围与 Task Plan 须由 Owner 批准。以下 `v0.1.Y` 仅作可独立验收的拆分草案；不表示已开始或已分配正式编号。Memory 子系统能力阶段另用 `M1` 等，见 [memory-system-design.md](./memory-system-design.md)。
+Owner 于 2026-09-18 批准先部署本地对话模型并接入项目，指定当前任务为 **v0.1.1**，要求做好回退并更新工作日志。Development Version 为 v0.1；此前 Memory 的 v0.1.Y 仅为未批准草案，现撤去该候选编号，保留后续方向。
+
+| 编号 | 目标与验收 | 状态 |
+| --- | --- | --- |
+| v0.1.1 | Qwen3-0.6B Q8 + 便携 llama.cpp；复用配置和适配器；CLI、异常路径、GPU 与停止释放实测；文档、回退说明与原子提交 | 实施与验证通过，任务以批准后的 push 为完成标记 |
+| v0.1.2 | Version Finalization：覆盖整版验证、核对任务和资料、收尾提交，经批准 push 后宣告版本完成 | 待 v0.1.1 完成 |
+
+本版不包含持久化 Memory、Embedding、工具循环或新的 UI。实现过程中确认现有配置和适配器已支持该协议，因此用独立启动脚本为子进程提供配置，不修改核心接口或原 .env。操作与实测详见[本地模型说明](./local-model.md)。
+
+### 后续候选：Persistent Memory Foundation
+
+**状态：规划候选，尚未分配正式 Development Version。** 本地模型试运行之后，长期 Memory 仍是候选方向；正式目标、范围与 Task Plan 须由 Owner 批准。以下阶段号只表示依赖顺序。Memory 子系统能力阶段另用 `M1` 等，见 [memory-system-design.md](./memory-system-design.md)。
 
 **进入条件：** Owner 确定 Development Version 的目标与范围；Codex 提交含 Version Finalization 的 Task Plan 并获一次性批准。**不在此候选范围内：** 工具循环、Web、语音、角色形象及高级关系记忆。
 
-| 候选编号 | 任务与依赖 | 验收条件 | 建议提交（批准后按规范补编号） |
-| --- | --- | --- | --- |
-| v0.1.1 | Memory 数据模型、`MemoryStore` 协议与 schema 设计；起点 | 可构造且校验参数；协议不依赖 SQLite；Runtime 无数据库细节 | `feat(memory): define memory model and store protocol [v0.1.1]` |
-| v0.1.2 | SQLite Store；依赖 .1 | 插入、按 ID 取、列出、删除；重启保持；连接生命周期与路径明确，数据库被 Git 忽略 | `feat(memory): add SQLite memory store [v0.1.2]` |
-| v0.1.3 | MemoryService；依赖 .2 | Store 可替换；服务错误明确；Runtime 无 SQL | `feat(memory): add persistent memory service [v0.1.3]` |
-| v0.1.4 | 手动 CLI 命令；依赖 .3 | `/remember`、`/memories`、`/forget` 可保存、查看、删除；重启保持；`/reset` 不删除长期记忆 | `feat(cli): add persistent memory commands [v0.1.4]` |
-| v0.1.5 | 基础检索与 Context 注入；依赖 .4 | 新会话可使用相关记录；限制注入数与预算；标来源；Context Builder 不直读数据库 | `feat(memory): inject recalled memories into context [v0.1.5]` |
-| v0.1.6 | Embedding 与基础排序；依赖 .5，是否纳入首版待 Owner 决定 | 改写查询仍能找到相关记忆；Provider 可换；API 故障明确；不把聊天接口当 Embedding 接口 | `feat(memory): add semantic memory retrieval [v0.1.6]` |
-| v0.1.7 | 自动提取与评估；依赖 .4，可在 .6 后推进；是否纳入首版待 Owner 决定 | 寒暄不大量写库；明确偏好有候选；去重、更正、来源与敏感策略可验证 | `feat(memory): add memory extraction and evaluation [v0.1.7]` |
-| v0.1.8 | Version Finalization；依赖该版本获批的所有任务 | 完整目标验证通过；README、设计和日志准确；收尾提交获批准并 push 后才可宣告版本完成 | `docs(project): finalize persistent memory foundation [v0.1.8]` |
+| 候选阶段 | 任务与依赖 | 验收条件 |
+| --- | --- | --- |
+| 1 | Memory 数据模型、`MemoryStore` 协议与 schema 设计；起点 | 可构造且校验参数；协议不依赖 SQLite；Runtime 无数据库细节 |
+| 2 | SQLite Store；依赖 1 | 插入、按 ID 取、列出、删除；重启保持；连接生命周期与路径明确，数据库被 Git 忽略 |
+| 3 | MemoryService；依赖 2 | Store 可替换；服务错误明确；Runtime 无 SQL |
+| 4 | 手动 CLI 命令；依赖 3 | `/remember`、`/memories`、`/forget` 可保存、查看、删除；重启保持；`/reset` 不删除长期记忆 |
+| 5 | 基础检索与 Context 注入；依赖 4 | 新会话可使用相关记录；限制注入数与预算；标来源；Context Builder 不直读数据库 |
+| 6 | Embedding 与基础排序；依赖 5，是否纳入首版待 Owner 决定 | 改写查询仍能找到相关记忆；Provider 可换；API 故障明确；不把聊天接口当 Embedding 接口 |
+| 7 | 自动提取与评估；依赖 4，可在 6 后推进；是否纳入首版待 Owner 决定 | 寒暄不大量写库；明确偏好有候选；去重、更正、来源与敏感策略可验证 |
+| 8 | Version Finalization；依赖该版本获批的所有任务 | 完整目标验证通过；README、设计和日志准确；收尾提交获批准并 push 后才可宣告版本完成 |
 
 若 Owner 将首版限定为 M1，可把 Embedding 与自动提取移至后续 Development Version，并重新编号 Finalization；调整原因记录在工作日志。每任务只在测试、文档、原子 commit 和经批准的 push 完成后标记完成。
 
@@ -96,7 +109,7 @@ User Input → CLI → AgentRuntime → ContextBuilder
 
 ## 8. 优先级规则
 
-当前基线已保存；下一候选优先级为长期 Memory 最小闭环，其后依次是 Tool 与 Environment、Identity / Relationship / State、Context Management、Web / Desktop、Voice / Vision / 2D Character、高级认知与具身扩展。Memory 优先是为了跨重启连续性，架构上仍由 Runtime 编排。优先级不构成开启新 Development Version 的授权。
+当前先完成已获批准的本地对话模型试运行；之后的候选优先级为长期 Memory 最小闭环，其后依次是 Tool 与 Environment、Identity / Relationship / State、Context Management、Web / Desktop、Voice / Vision / 2D Character、高级认知与具身扩展。Memory 用于跨重启连续性，架构上仍由 Runtime 编排。候选优先级不构成开启后续 Development Version 的授权。
 
 ## 9. 暂不实施
 
