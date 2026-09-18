@@ -6,13 +6,14 @@
 
 ## 当前状态
 
-**当前开发：v0.1 — 本地对话模型试运行（进行中）。** v0.1.1 已完成接入与本机验证，任务状态按工作日志及提交推送核验为准；v0.1.2 为 Version Finalization。v0.0 CLI 基线已完成（历史回溯）。`pyproject.toml` 中的包版本 `0.1.0` 不等同于开发版本。
+**当前开发：v0.1 — 本地对话模型试运行（进行中）。** v0.1.1 已完成便携部署并推送；v0.1.2 正在统一模型选择与启动入口；v0.1.3 为 Version Finalization。v0.0 CLI 基线已完成（历史回溯）。`pyproject.toml` 中的包版本 `0.1.0` 不等同于开发版本。
 
 已经实现：
 
 - 基于 CLI（命令行界面）的连续对话
 - 通过 OpenAI 兼容接口调用 DeepSeek
 - 使用便携 llama.cpp 服务调用本地 Qwen3-0.6B Q8 对话模型（Windows NVIDIA GPU 已实测）
+- 统一 CLI 启动时选择 DeepSeek 或本地 Qwen3；选择本地时自动启动并停止模型服务
 - 当前会话历史记录（默认最多保留最近 20 个完整问答轮次）
 - 上下文构建
 - `/reset` 清空当前会话
@@ -91,7 +92,7 @@ py -m venv .venv
 
 `-e` 表示可编辑安装。修改普通 Python 源码后，只需重新启动程序，不必再次安装。
 
-## 远端模式配置
+## DeepSeek 配置
 
 首次配置时复制模板；已有 `.env` 时直接编辑原文件：
 
@@ -120,15 +121,23 @@ LLM_MODEL=填写账户可用的聊天模型名称
 
 `.env` 已通过 `.gitignore` 排除，不应上传到 GitHub。
 
-## 远端模式运行
+## 运行与模型选择
 
-确保 PowerShell 当前位于项目根目录，然后执行：
+确保 PowerShell 当前位于项目根目录，然后执行同一入口：
 
 ```powershell
 .\.venv\Scripts\python.exe -m persistent_agent.interfaces.cli
 ```
 
-程序启动后可以直接输入消息：
+启动后输入 `1` 使用 DeepSeek，输入 `2` 使用本地 Qwen3-0.6B。选择本地时程序会启动本地服务；退出对话时会关闭由本次 CLI 启动的服务。首次在新电脑使用本地模型，先运行一次：
+
+```powershell
+.\.venv\Scripts\python.exe -m persistent_agent.interfaces.cli --setup-local
+```
+
+也可用 `--model deepseek` 或 `--model local` 跳过选择菜单。DeepSeek 使用 `.env`；本地模型使用 `data/local-model/` 中的密钥和模型文件，不读取 `.env` 中的 DeepSeek 密钥。
+
+选择模型并启动后可以输入消息：
 
 ```text
 你：我叫 LeveLyume，正在学习计算机。
@@ -144,23 +153,9 @@ Agent：……
 
 ## 本地模型模式
 
-本机已部署 Qwen3-0.6B Q8。使用两个 PowerShell 窗口，均位于项目根目录：
+本机已部署 Qwen3-0.6B Q8。统一入口选 `2` 即可使用。固定的便携构建适用于 Windows x64、兼容 CUDA 13.3 的 NVIDIA 驱动；详细安装条件、校验值、实测结果及回退步骤见[本地模型说明](docs/local-model.md)。
 
-```powershell
-# 窗口一：启动本地服务
-.\.venv\Scripts\python.exe scripts/local_model.py serve
-```
-
-```powershell
-# 窗口二：启动连接本地模型的 Agent
-.\.venv\Scripts\python.exe scripts/local_model.py chat
-```
-
-新环境先运行 `scripts/local_model.py setup`，使用项目虚拟环境的 Python。固定的便携构建适用于 Windows x64、兼容 CUDA 13.3 的 NVIDIA 驱动；详细安装条件、校验值、实测结果及回退步骤见[本地模型说明](docs/local-model.md)。
-
-本地入口只设置 CLI 子进程配置，保留原 `.env`。服务监听 `127.0.0.1:18080`，使用独立随机访问密钥；单会话、4096 Token 上下文、最多生成 512 Token、关闭思考模式。超长输入会报错，仍可用 `/reset` 清空历史。0.6B 的回复质量有限，已观察到简单算术误答。
-
-CLI 输入 `/exit` 后，在服务窗口按 Ctrl+C 才会停止模型服务并释放资源。原远端模式命令仍读取原配置。
+服务监听 `127.0.0.1:18080`，使用独立随机访问密钥；单会话、4096 Token 上下文、最多生成 512 Token、关闭思考模式。超长输入会报错，仍可用 `/reset` 清空历史。0.6B 的回复质量有限，已观察到简单算术误答。
 
 ## CLI 命令
 
@@ -178,7 +173,6 @@ CLI 输入 `/exit` 后，在服务窗口按 Ctrl+C 才会停止模型服务并�
 ```text
 persistent-agent/
 ├── docs/                       # 架构、路线和开发日志
-├── scripts/local_model.py      # 便携部署、服务启动与本地 CLI 入口
 ├── src/
 │   └── persistent_agent/
 │       ├── core/               # 公共数据结构和协议
@@ -186,7 +180,7 @@ persistent-agent/
 │       ├── runtime/            # Agent 主运行流程
 │       ├── session/            # 当前会话与 Working Memory
 │       ├── cognition/          # 上下文构建
-│       ├── model/              # 模型接口与适配器
+│       ├── model/              # 模型接口、适配器与便携本地服务管理
 │       ├── memory/             # 长期记忆（未实现）
 │       ├── capabilities/       # 工具与其他能力（未实现）
 │       ├── environment/        # 执行环境（未实现）
@@ -194,7 +188,7 @@ persistent-agent/
 │       ├── relationship/       # 用户关系状态（未实现）
 │       ├── state/              # Agent 当前状态（未实现）
 │       └── interfaces/         # CLI 等交互入口
-├── tests/                      # 本地部署及失败路径的自动化测试
+├── tests/                      # 模型选择、本地部署及失败路径的自动化测试
 ├── data/                       # 本地运行数据，不提交 Git
 ├── workspace/                  # Agent 工作目录，不提交 Git
 ├── .env.example                # 配置模板

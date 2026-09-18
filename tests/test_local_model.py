@@ -1,4 +1,3 @@
-import importlib.util
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
@@ -11,16 +10,10 @@ import zipfile
 
 from persistent_agent.cognition.context_builder import ContextBuilder
 from persistent_agent.model.base import ModelError
+from persistent_agent.model import local_model
 from persistent_agent.model.openai_compatible import OpenAICompatibleModel
 from persistent_agent.runtime.agent_runtime import AgentRuntime
 from persistent_agent.session.working_memory import WorkingMemory
-
-
-spec = importlib.util.spec_from_file_location(
-    "local_model", Path(__file__).resolve().parents[1] / "scripts" / "local_model.py"
-)
-local_model = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(local_model)
 
 
 class LocalDeploymentTests(unittest.TestCase):
@@ -30,9 +23,9 @@ class LocalDeploymentTests(unittest.TestCase):
             key = Path(folder) / "key.txt"
             key.write_text("test-local-key", encoding="utf-8")
             with patch.object(local_model, "KEY_FILE", key):
-                child = local_model.chat_environment()
-            self.assertEqual(child["LLM_BASE_URL"], "http://127.0.0.1:18080/v1")
-            self.assertEqual(child["LLM_API_KEY"], "test-local-key")
+                settings = local_model.local_settings()
+            self.assertEqual(settings.base_url, "http://127.0.0.1:18080/v1")
+            self.assertEqual(settings.api_key, "test-local-key")
             self.assertEqual(os.environ["LLM_API_KEY"], "remote-test-key")
             self.assertEqual(os.environ["LLM_BASE_URL"], original["LLM_BASE_URL"])
 

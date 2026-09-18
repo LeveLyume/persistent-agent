@@ -2,7 +2,7 @@
 
 ## 部署与边界
 
-本入口使用 Qwen 官方 `Qwen3-0.6B-Q8_0.gguf`，通过 llama.cpp 的 OpenAI 兼容接口接入现有 CLI、Runtime 和模型适配器。已在 Windows、RTX 5070 Laptop GPU 8 GB、驱动 610.47（CUDA UMD 13.3）上实测。此部署脚本固定为 Windows x64 CUDA 13.3 构建，不适用于任意操作系统或旧显卡驱动。
+本入口使用 Qwen 官方 `Qwen3-0.6B-Q8_0.gguf`，通过 llama.cpp 的 OpenAI 兼容接口接入现有 CLI、Runtime 和模型适配器。已在 Windows、RTX 5070 Laptop GPU 8 GB、驱动 610.47（CUDA UMD 13.3）上实测。便携部署固定为 Windows x64 CUDA 13.3 构建，不适用于任意操作系统或旧显卡驱动。
 
 部署文件全部位于项目的 `data/local-model/`，该目录已被 Git 忽略。便携程序不安装系统服务、不设置自启动、不修改 PATH、驱动、全局 Python、注册表或防火墙。现有 `.venv` 和 `.env` 保留原样。安装只需要已有的 Python 3.11+，不增加项目 Python 依赖。
 
@@ -19,26 +19,27 @@
 先按 README 安装项目依赖。以下命令在项目根目录运行。当前电脑已部署；换机或恢复文件时运行一次：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/local_model.py setup
+.\.venv\Scripts\python.exe -m persistent_agent.interfaces.cli --setup-local
 ```
 
-在第一个 PowerShell 窗口启动服务，看到监听地址后保持窗口开启：
+日常使用只需要一个 PowerShell 窗口：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/local_model.py serve
+.\.venv\Scripts\python.exe -m persistent_agent.interfaces.cli
 ```
 
-在第二个 PowerShell 窗口启动 Agent：
+启动菜单输入 `1` 选择 DeepSeek，输入 `2` 选择本地 Qwen3-0.6B；输入 `/exit` 可在选择前退出。也可直接指定模型，适合脚本或不想看菜单时使用：
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/local_model.py chat
+.\.venv\Scripts\python.exe -m persistent_agent.interfaces.cli --model local
+# 或 --model deepseek
 ```
 
-`chat` 仅对 CLI 子进程设置 `LLM_BASE_URL=http://127.0.0.1:18080/v1`、`LLM_MODEL=qwen3-0.6b` 和独立本地访问密钥。原 `.env` 和父进程环境变量不修改，因此不会将 DeepSeek 密钥发给本地服务。配置仍复用既有的三个必填字段，无需新增 Provider 或修改 Runtime。
+选本地时，同一 CLI 从独立文件取得本地密钥，启动 `127.0.0.1:18080` 的 llama.cpp 子进程，等待就绪后进入对话。退出 CLI 时只停止本次启动的子进程。选 DeepSeek 时才读取原 `.env`；本地模式不读取其中的远端密钥。两种模式复用现有模型适配器和 Runtime。
 
 安装时生成随机本地密钥，存于已忽略的 `data/local-model/api-key.txt`，服务和 CLI 共用此文件，不打印密钥。服务仅监听 `127.0.0.1:18080`，限制 CORS 来源，关闭 Web UI，启用离线模式。运行服务期间 API 需要本地密钥；不要将该文件提交或分享。初次下载需要网络，模型推理使用本地文件。
 
-`/reset` 清空会话，`/exit` 退出 CLI。退出 CLI 不会停止另一个窗口里的模型服务；在服务窗口按 **Ctrl+C** 停止服务并释放模型资源。
+`/reset` 清空会话，`/exit` 退出 CLI。正常退出或在对话中按 Ctrl+C 时，程序会清理自己启动的本地服务并释放模型资源。端口已被其他程序占用时会报告错误，不结束未知进程。服务日志保存在已忽略的 `data/local-model/server.log`。
 
 ## 运行参数与限制
 
@@ -53,13 +54,15 @@
 
 ## 验证记录（2026-09-18）
 
-5 项自动化测试通过：本地配置只覆盖子进程、错误校验文件保留、越界解压被拒绝、服务边界参数、HTTP 错误与输出截断不写入会话。运行：
+v0.1.1 的 5 项自动化测试覆盖配置隔离、错误校验文件保留、越界解压拒绝、服务边界参数、HTTP 错误与输出截断不写入会话。v0.1.2 新增模型选择与资源清理测试，当前共 8 项通过。运行：
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
 本机真实模型验证：健康检查、模型列表、无密钥请求返回 401、CLI 三轮回复与姓名追问、`/reset`、`/exit` 均通过；12063 Token 请求被 4096 Token 限制明确拒绝；停服后的 CLI 显示连接失败并可退出。`.env` 前后 SHA256 相同。
+
+v0.1.2 对统一入口的真实试跑：菜单选择本地 Qwen、姓名追问、`/reset`、`/exit` 均通过；退出后本地端口已关闭，整卡显存由试跑前 2186 MiB 回到 2166 MiB。菜单选择 DeepSeek 可以进入原模式并退出；本次没有向远端 API 发送请求。错误选项会提示重新选择。`.env` 的 SHA256 未改变。
 
 | 实测项 | 本次结果 |
 | --- | --- |
@@ -70,12 +73,12 @@
 
 整卡显存每约 0.2 秒采样，也包含桌面与其他程序；不是进程精确峰值。未测试长时间运行、并发、大规模质量评估或 Embedding 共存。原 DeepSeek 真实 API 本次未调用，远端使用路径未修改。
 
-本机原始记录保存在已忽略的 `data/local-model/verification.json`、`server.log`；测试服务已停止。这些记录不是上传的测试基准，普通 `serve` 只向终端输出日志。
+v0.1.1 原始记录保存在已忽略的 `data/local-model/verification.json`、`server.log`；v0.1.2 真实入口测试也已结束。历史显存数字不作为所有运行环境的保证。
 
 ## 停止与回退
 
-1. CLI 输入 `/exit`，服务窗口按 Ctrl+C；这只停止本次启动的进程，不按进程名批量结束其他服务。
-2. 需要回到 DeepSeek 时，直接使用原命令 `.\.venv\Scripts\python.exe -m persistent_agent.interfaces.cli`，读取原 `.env`。无需恢复配置或重装依赖。
+1. CLI 输入 `/exit` 或在对话中按 Ctrl+C，程序关闭由本次 CLI 启动的服务；不会按进程名批量结束其他服务。
+2. 需要回到 DeepSeek 时，再次运行统一入口选 `1`，或使用 `--model deepseek`。无需恢复配置或重装依赖。
 3. 需要卸载便携部署时，先确认本项目服务已停止，再删除**本项目的 `data/local-model/` 目录**。该目录包含本地密钥、下载包、运行库、模型与测试记录；不要删除整个 `data/`。
 4. 需要撤销仓库接入时，对本任务提交做单独的 Git revert 并复查；保留其他任务的改动，不使用 `reset --hard` 或强制推送。
 

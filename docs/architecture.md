@@ -2,7 +2,7 @@
 
 ## 1. 文档状态
 
-**状态：** Draft；**更新：** 2026-09-18；**项目阶段：** v0.1 本地对话模型试运行进行中，v0.1.1 已接入并完成本机验证，提交推送状态见工作日志与 Git。本文同时描述当前架构（Current）、目标架构（Target）与远期方向（Future）；实际行为以代码和可重复验证结果为准。
+**状态：** Draft；**更新：** 2026-09-18；**项目阶段：** v0.1 本地对话模型试运行进行中，v0.1.1 已推送，v0.1.2 正在统一模型选择入口；任务状态见工作日志与 Git。本文同时描述当前架构（Current）、目标架构（Target）与远期方向（Future）；实际行为以代码和可重复验证结果为准。
 
 ## 2. 项目目标
 
@@ -21,14 +21,17 @@
 
 ## 4. 当前已实现架构（Current）
 
-`interfaces/cli.py` 从当前工作目录加载 `.env`，创建模型适配器、Working Memory、Context Builder 和 Runtime。`AgentRuntime.handle_message` 读取历史副本、构建消息、同步调用模型，成功后才保存本轮问答。`/reset` 清空会话，`/exit` 退出并关闭模型客户端。
+`interfaces/cli.py` 先选择 DeepSeek 或本地 Qwen3。DeepSeek 从当前工作目录加载 `.env`；本地模式读取独立密钥并在本次 CLI 进程内管理模型服务子进程。随后两种模式创建相同的模型适配器、Working Memory、Context Builder 和 Runtime。`AgentRuntime.handle_message` 读取历史副本、构建消息、同步调用模型，成功后才保存本轮问答。`/reset` 清空会话，`/exit` 退出并关闭模型客户端及本次启动的本地服务。
 
-本地入口 `scripts/local_model.py chat` 只为 CLI 子进程覆盖三个模型配置项，调用同一接口链路。`serve` 运行独立的便携 llama.cpp 服务，监听本机地址、启用本地密钥，推理程序和权重位于忽略的 `data/local-model/`。部署属于启动工具，不创建新的 Runtime 或 ModelProvider；同协议服务通过配置切换。详见[本地模型说明](./local-model.md)。
+统一入口为 `python -m persistent_agent.interfaces.cli`，可在菜单选择模型，或用 `--model deepseek|local` 指定。`--setup-local` 执行可重复的便携部署。`model/local_model.py` 负责本地密钥、文件和受控服务进程；推理程序与权重位于忽略的 `data/local-model/`。没有新增 Runtime 或 ModelProvider；同协议服务通过配置切换。详见[本地模型说明](./local-model.md)。
 
 ```mermaid
 flowchart TD
-  CLI["CLI 输入与命令"] --> RT["AgentRuntime"]
-  CLI --> CFG["config/settings.py: .env 与进程环境"]
+  SELECT["CLI 选择 DeepSeek 或本地 Qwen"] --> CLI["CLI 输入与命令"]
+  CLI --> RT["AgentRuntime"]
+  CLI --> CFG["DeepSeek: .env / 本地: 独立密钥"]
+  SELECT --> LOCAL["本地模式：local_model.py 管理 llama.cpp 子进程"]
+  LOCAL --> API
   RT --> WM["WorkingMemory: 最近 20 轮"]
   RT --> CB["ContextBuilder: 系统提示 + 历史 + 当前输入"]
   WM --> CB
@@ -82,7 +85,7 @@ flowchart TD
 | `runtime` | 单轮同步编排、会话清空 | 基础实现 | 工具循环与多服务编排 |
 | `session` | 进程内最近 20 轮问答 | 已实现 | 任务及临时工具结果 |
 | `cognition` | 系统提示、历史、输入拼接 | 基础实现 | 预算、摘要、规划 |
-| `model` | Provider 协议、OpenAI 兼容适配器、错误归一 | 已实现 | 多模型与结构化工具请求 |
+| `model` | Provider 协议、OpenAI 兼容适配器、本地服务管理、错误归一 | 已实现 | 其他协议与结构化工具请求 |
 | `memory` | 文件与子目录占位 | 未实现 | 长期保存、检索、形成；见[专项设计](./memory-system-design.md) |
 | `capabilities` | Tool 文件占位 | 未实现 | Tool 与注册表 |
 | `environment` | 环境文件占位 | 未实现 | 受控工作区、远程执行 |
@@ -127,7 +130,7 @@ adapters → 外部 SDK 与具体持久化产品
 
 ## 10. 数据与配置
 
-`.env` 保存本地密钥且不提交；`.env.example` 只含变量名和无敏感示例。`data/` 约定放运行数据，`workspace/` 约定为 Agent 工作目录，均不提交；**目录约定并非安全隔离**。当前 CLI 从 `Path.cwd() / ".env"` 读取配置，进程环境变量优先，因此启动目录会影响配置定位。持久化接入时还需确定迁移、备份与数据版本策略。
+`.env` 保存 DeepSeek 密钥且不提交；本地服务密钥位于忽略的 `data/local-model/api-key.txt`。`.env.example` 只含变量名和无敏感示例。`data/` 约定放运行数据，`workspace/` 约定为 Agent 工作目录，均不提交；**目录约定并非安全隔离**。DeepSeek 模式从 `Path.cwd() / ".env"` 读取配置，进程环境变量优先，因此启动目录会影响配置定位。本地模式使用独立文件，不读取 `.env`。持久化接入时还需确定迁移、备份与数据版本策略。
 
 ## 11. 错误处理原则
 
@@ -157,7 +160,7 @@ adapters → 外部 SDK 与具体持久化产品
 | --- | --- | --- | --- |
 | 使用 `src/` 布局 | 区分包代码与仓库内容 | 统一包路径 | 已采用 |
 | Provider/Adapter 隔离模型 | 降低供应商耦合 | Runtime 依赖内部协议 | 基础实现 |
-| 便携 llama.cpp 复用兼容适配器 | 本地试运行及可回退 | 独立目录与子进程配置，原 .env 保留 | v0.1.1 已实现并实测 |
+| 便携 llama.cpp 复用兼容适配器 | 本地试运行及可回退 | 独立目录与本地密钥，原 .env 保留；CLI 管理本次启动的进程 | v0.1.1 部署，v0.1.2 统一入口 |
 | Working Memory 与长期 Memory 分离 | 生命周期不同 | 未来需独立 Memory Service | 前者已实现，后者规划 |
 | Runtime 只负责编排 | 保持模块边界 | 不直接接 SQL 或具体 Tool | 当前遵循，目标约束 |
 | 首版 CLI 与同步调用 | 建立可运行基线 | 暂无流式与多界面 | 已采用 |

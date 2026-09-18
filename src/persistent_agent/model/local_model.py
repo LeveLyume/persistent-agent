@@ -1,19 +1,19 @@
-"""Portable Windows deployment of Qwen3; uses only Python's standard library."""
+"""Portable Qwen3 deployment and a CLI-owned local inference process."""
 
-import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
 import secrets
 import shutil
+import socket
 import subprocess
-import sys
+import time
 import urllib.request
 import zipfile
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 DEPLOY = ROOT / "data" / "local-model"
 RUNTIME = DEPLOY / "llama-b10964-cuda-13.3"
 MODEL_NAME = "Qwen3-0.6B-Q8_0.gguf"
@@ -115,52 +115,65 @@ def server_command() -> list[str]:
     ]
 
 
-def chat_environment() -> dict[str, str]:
+def local_settings():
+    from persistent_agent.config.settings import Settings
+
     if not KEY_FILE.is_file():
         raise ValueError("Local API key missing; run setup first.")
     key = KEY_FILE.read_text(encoding="utf-8").strip()
     if not key:
         raise ValueError("Local API key file is empty; restore it before starting.")
-    environment = os.environ.copy()
-    environment.update(
-        LLM_BASE_URL=f"http://127.0.0.1:{PORT}/v1",
-        LLM_MODEL=ALIAS,
-        LLM_API_KEY=key,
+    return Settings(
+        api_key=key,
+        base_url=f"http://127.0.0.1:{PORT}/v1",
+        model=ALIAS,
     )
-    return environment
 
 
-def run_child(command: list[str], environment: dict[str, str]) -> int:
-    child = subprocess.Popen(command, cwd=ROOT, env=environment)
-    try:
-        return child.wait()
-    except KeyboardInterrupt:
-        # The foreground child also receives Ctrl+C. Give it time to release its resources.
+class LocalModelServer:
+    """Start only our own loopback server, then stop exactly that child on exit."""
+
+    def __init__(self) -> None:
+        self._process: subprocess.Popen | None = None
+        self._log = None
+
+    def __enter__(self):
+        command = server_command()
+        with socket.socket() as probe:
+            try:
+                probe.bind(("127.0.0.1", PORT))
+            except OSError as error:
+                raise RuntimeError(f"本地端口 {PORT} 已被占用，请检查占用来源。") from error
+        self._log = (DEPLOY / "server.log").open("ab")
+        environment = {k: v for k, v in os.environ.items() if not k.upper().startswith("LLAMA_")}
         try:
-            return child.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            child.terminate()
-            return child.wait(timeout=5)
+            self._process = subprocess.Popen(
+                command, cwd=ROOT, env=environment, stdout=self._log, stderr=self._log,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                if self._process.poll() is not None:
+                    raise RuntimeError(f"本地模型服务启动失败，退出码 {self._process.returncode}。")
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/health", timeout=1):
+                        return self
+                except (OSError, ValueError):
+                    time.sleep(0.25)
+            raise RuntimeError("本地模型服务在 30 秒内未就绪。")
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
 
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("setup", "serve", "chat"))
-    args = parser.parse_args()
-    try:
-        if args.action == "setup":
-            setup()
-            return 0
-        if args.action == "serve":
-            # Ignore inherited llama settings to make binding and resource limits reproducible.
-            environment = {k: v for k, v in os.environ.items() if not k.upper().startswith("LLAMA_")}
-            return run_child(server_command(), environment)
-        print(f"Local chat: {ALIAS} at http://127.0.0.1:{PORT}/v1", flush=True)
-        return run_child([sys.executable, "-m", "persistent_agent.interfaces.cli"], chat_environment())
-    except (OSError, ValueError, zipfile.BadZipFile) as error:
-        print(f"Local model: {error}", file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    def __exit__(self, _type, _value, _traceback) -> None:
+        try:
+            if self._process is not None and self._process.poll() is None:
+                self._process.terminate()
+                try:
+                    self._process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    self._process.kill()
+                    self._process.wait(timeout=5)
+        finally:
+            if self._log is not None:
+                self._log.close()
